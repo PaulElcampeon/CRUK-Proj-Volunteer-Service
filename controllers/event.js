@@ -1,54 +1,62 @@
 const Event = require("../models/event.model");
 
-exports.create_event = function(req, res, next) {
-  let event = new Event({
-    title: req.body.title
-  });
+exports.create_event = function(req, res) {
+    let eventName = req.body.title;
+    let newEvent = new Event({
+        title: eventName
+    });
 
-  event.save(function(err) {
-    if (err) {
-      return next(err);
-    }
-    res.send("User Created successfully");
-  });
+    Event
+        .find({title:eventName})
+            .then(event => {
+            if(event.length == 0) {
+                newEvent
+                    .save()
+                        .then(event => {
+                            res.status(200).send("Event created successfully");
+                        })
+                        .catch(err => {
+                            res.status(400).send("Event not created");
+                        })
+            } else {
+                res.status(400).send("An Event wit that name has already been created")
+            }
+        }).catch(err => {
+            console.log("No Event with that name")
+        })
 };
 
-exports.event_details = function(req, res, next) {
-  Event.findById(req.params.id, function(err, event) {
-    if (err) return next(err);
-    res.send(event);
-  });
+exports.get_event = function(req, res) {
+    Event
+        .findById(req.params.id)
+            .then(event => {
+                res.status(200).json(event);
+            })
+            .catch(err => {
+                res.status(400).send("Could not find event");
+            })
 };
 
-exports.event_update = function(req, res) {
-  Event.findByIdAndUpdate(
-    req.params.id,
-    { $set: req.body },
-    event.save(function(err, event) {
-      if (err) return next(err);
-      res.send("Event udpated.");
-    })
-  );
-};
+exports.check_in = function(req, res) {
+    let checkInObj = req.body;
 
-exports.check_in = function(req, res, next) {
-  let checkIn = {
-    title: "london fun run",
-    user: {
-      email: "Kaltun@email.com",
-      name: "Kaltun"
-    }
-  };
-
-  let eventCollection = db.getCollection(events);
-  let event;
-  try {
-    event = eventCollection.find({ title: checkIn.title });
-  } catch (err) {
-    console.log(err);
-    create_event(checkIn.title);
-    event = eventCollection.find({ title: checkIn.title });
-  }
-  event.users.push(checkIn.user);
-  eventCollection.update({ users }, checkIn.user);
+    Event
+        .findOne({title:checkInObj.title})
+            .then(event => {
+                if(!event.users.includes(checkInObj.email)) {
+                    event.users.push(checkInObj.email)
+                    event
+                        .save()
+                            .then(event => {
+                                res.status(200).send("Checked in successfully");
+                            }).catch(err => {
+                                res.status(400).send("Was not able to check in");
+                            })
+                } else {
+                    res.status(400).send("User already checked in");
+                }
+            })
+            .catch(err => {
+                res.status(400).send("Was not able to find event")
+            })
 };
